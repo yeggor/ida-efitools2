@@ -1,25 +1,33 @@
+import json
 import os
 import sys
-from uuid import UUID
-from struct import pack
 from builtins import bytes  # add bytes semantics from py3 to py2
+from struct import pack, unpack
+from uuid import UUID
 
 from ida_funcs import get_func
 from ida_idaapi import PLUGIN_KEEP, plugin_t
-from idc import get_bytes, o_displ, o_phrase, o_imm
-from ida_kernwin import action_handler_t, action_desc_t, register_action, unregister_action
-from ida_kernwin import get_screen_ea, attach_action_to_popup
-from ida_kernwin import AST_ENABLE_FOR_WIDGET, AST_DISABLE_FOR_WIDGET
-from ida_kernwin import BWN_DISASM, BWN_LOCTYPS
+from ida_kernwin import (
+    AST_DISABLE_FOR_WIDGET,
+    AST_ENABLE_FOR_WIDGET,
+    BWN_DISASM,
+    BWN_LOCTYPS,
+    action_desc_t,
+    action_handler_t,
+    attach_action_to_popup,
+    get_screen_ea,
+    register_action,
+    unregister_action,
+)
+from idc import get_bytes, o_displ, o_imm, o_phrase
 
 # this eliminates package name 'efitools2' from class paths
 # efitools2.core.objects.Structure != core.objects.Structure
 EFITOOLS_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "efitools2")
 sys.path.append(EFITOOLS_DIR)
 
-from efitools import EfiTools, FIX_CODE_SEGMENT_PERMISSIONS, IMPORT_EXTERNAL_TYPES
 from core.objects import Function
-
+from efitools import FIX_CODE_SEGMENT_PERMISSIONS, IMPORT_EXTERNAL_TYPES, EfiTools
 
 # customize hotkeys here
 RUN_PLUGIN_HOTKEY = "Ctrl-Alt-E"
@@ -54,7 +62,9 @@ def extract_guid(ea):
     else:
         raise LookupError("unable to find all EFI_GUID fields")
 
-    return guidname, pack("<IIII", fields["Data1"], fields["Data2"], fields["Data4"], fields["Data4+4"])
+    return guidname, pack(
+        "<IIII", fields["Data1"], fields["Data2"], fields["Data4"], fields["Data4+4"]
+    )
 
 
 class PrintEfiGuid(action_handler_t):
@@ -64,6 +74,17 @@ class PrintEfiGuid(action_handler_t):
 
     def __init__(self):
         action_handler_t.__init__(self)
+
+    @staticmethod
+    def get_guiddb_guid(guid: str) -> list:
+        guid_b = UUID(guid).bytes_le
+        guiddb_guid = list()
+        guiddb_guid.append(unpack("<I", guid_b[:4])[0])
+        guiddb_guid.append(unpack("<H", guid_b[4:6])[0])
+        guiddb_guid.append(unpack("<H", guid_b[6:8])[0])
+        for b in guid_b[8:]:
+            guiddb_guid.append(b)
+        return guiddb_guid
 
     def activate(self, ctx):
         """
@@ -83,6 +104,7 @@ class PrintEfiGuid(action_handler_t):
 
             print("Local variable EFI_GUID extraction for " + name)
 
+        print("guiddb = " + json.dumps(PrintEfiGuid.get_guiddb_guid(guid), indent=2))
         print("data = " + " ".join("%02x" % x for x in bytes(data)))
         print("guid = " + guid)
 
@@ -132,7 +154,9 @@ class EfiToolsPlugin(plugin_t):
 
     @staticmethod
     def register_action(action, *args):
-        register_action(action_desc_t(action.name, action.description, action(*args), action.hotkey))
+        register_action(
+            action_desc_t(action.name, action.description, action(*args), action.hotkey)
+        )
 
     @staticmethod
     def init():
