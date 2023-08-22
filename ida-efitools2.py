@@ -30,7 +30,7 @@ from core.objects import Function
 from efitools import FIX_CODE_SEGMENT_PERMISSIONS, IMPORT_EXTERNAL_TYPES, EfiTools
 
 # customize hotkeys here
-RUN_PLUGIN_HOTKEY = "Ctrl-Alt-E"
+RUN_PLUGIN_HOTKEY = "Ctrl-Alt-W"
 PRINT_EFI_GUID_HOTKEY = "Ctrl-Alt-G"
 SYNC_LOCAL_TYPES_HOTKEY = "F5"
 
